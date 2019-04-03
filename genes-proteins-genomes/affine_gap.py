@@ -34,12 +34,10 @@ def align_with_affine_gap(s1, s2):
   lower, lower_bt = get_new_lower_grid(width, height)
   middle, middle_bt = get_new_middle_grid(width, height)
   upper, upper_bt = get_new_upper_grid(width, height)
-  view_matrices(lower, middle, upper)
+  #view_matrices(lower, middle, upper)
 
   max_d = min(width + 1, height + 1)
   for d in range(1, max_d):
-    print("\nMax_d: ", max_d)
-    print("d: ", d)
 
     # Populate (d,d) for lower, upper and middle
     calc_lower(d, d, lower, lower_bt, middle)
@@ -70,7 +68,7 @@ def align_with_affine_gap(s1, s2):
     for i in range(d+1, max_d):
       calc_upper(i, d, upper, upper_bt, middle)
 
-  # Populate remaining rows or columns
+  # Populate remaining columns
   for i in range(1, max_d):
     for j in range(max_d, width + 1):
       calc_upper(i, j, upper, upper_bt, middle)
@@ -79,17 +77,45 @@ def align_with_affine_gap(s1, s2):
       calc_middle(i, j, middle, middle_bt, lower, upper, score)
 
   for i in range(1, max_d):
-    for j in range(max_d, height + 1):
+    for j in range(max_d, width + 1):
       calc_lower(i, j, lower, lower_bt, middle)
 
-      score = BLOSUM[s1[i- 1]][s2[j - 1]]
+      score = BLOSUM[s1[i - 1]][s2[j - 1]]
       calc_middle(i, j, middle, middle_bt, lower, upper, score)
 
-  view_matrices(lower, middle, upper)
+  # Populate remaining rows
+  for i in range(max_d, height + 1):
+    for j in range(1, max_d):
+      calc_upper(i, j, upper, upper_bt, middle)
+
+      score = BLOSUM[s1[i - 1]][s2[j - 1]]
+      calc_middle(i, j, middle, middle_bt, lower, upper, score)
+
+  for i in range(max_d, height + 1):
+    for j in range(1, max_d):
+      calc_lower(i, j, lower, lower_bt, middle)
+
+      score = BLOSUM[s1[i - 1]][s2[j - 1]]
+      calc_middle(i, j, middle, middle_bt, lower, upper, score)
+
+  #view_matrices(lower, middle, upper)
+  print(middle[height][width])
   return backtrack(s1, s2, lower_bt, middle_bt, upper_bt)
 
 
 def view_matrices(lower, middle, upper):
+  print("\nLOWER")
+  for row in lower:
+    print([format(n, '03') for n in row])
+  print("\nMIDDLE")
+  for row in middle:
+    print([format(n, '03') for n in row])
+  print("\nUPPER")
+  for row in upper:
+    print([format(n, '03') for n in row])
+  print()
+
+def view_bt_matrices(lower, middle, upper):
   print("\nLOWER")
   for row in lower:
     print(row)
@@ -105,15 +131,27 @@ def view_matrices(lower, middle, upper):
 def backtrack(s1, s2, lower_bt, middle_bt, upper_bt):
   s1p = []
   s2p = []
-  i=len(middle_bt)-1
-  j=len(middle_bt[0])-1
-  view_matrices(lower_bt, middle_bt, upper_bt)
+  i = len(middle_bt) - 1
+  j = len(middle_bt[0]) - 1
 
-  pos = ''
+  #view_bt_matrices(lower_bt, middle_bt, upper_bt)
 
-  while i > 0 and j > 0:
-    if pos == 'U':
-
+  while i>=0 and j>=0 and middle_bt[i][j] != '':
+        if middle_bt[i][j] == "\\":
+            s1p.append(s1[i-1])
+            s2p.append(s2[j-1])
+            i -= 1
+            j -= 1
+        elif middle_bt[i][j] == "|":
+            s1p.append(s1[i-1])
+            s2p.append('-')
+            i -= 1
+        elif middle_bt[i][j] == '-':
+            s1p.append('-')
+            s2p.append(s2[j-1])
+            j -= 1
+  s1p.reverse()
+  s2p.reverse()
 
   return (s1p, s2p)
 
@@ -160,45 +198,47 @@ def calc_middle(i, j, middle, middle_bt, lower, upper, score):
     middle_bt[i][j] = "\\"
 
 
-def get_new_lower_grid(width, height):
-  lower = [[0]]
-  lower_bt = [[""]]
-
-  # Set left edge to OPEN_PENALTY + index * EXTEND_PENALTY
-  for i in range(height):
-    value = OPEN_PENALTY + i * EXTEND_PENALTY
-    lower.append([value])
-    lower_bt.append(["|"])
-
-  # Set all other columns to negative infinity
-  for i in range(height + 1):
-    for j in range(width):
-      lower[i].append(-math.inf)
-      lower_bt[i].append("")
-
-  return (lower, lower_bt)
-
-
 def get_new_upper_grid(width, height):
   upper = [[0]]
   upper_bt = [[""]]
 
-  # Set top edge to OPEN_PENALTY + index * EXTEND_PENALTY
-  for i in range(width):
-    value = OPEN_PENALTY + i * EXTEND_PENALTY
-    upper[0].append(value)
-    upper_bt[0].append("-")
+  # Set left edge to OPEN_PENALTY + index * EXTEND_PENALTY
+  for i in range(height):
+    #value = -OPEN_PENALTY - i * EXTEND_PENALTY
+    value = -OPEN_PENALTY
+    upper.append([value])
+    upper_bt.append(["|"])
 
-
-  # Set all other rows to negative infinity
-  for i in range(1, height + 1):
-    upper.append([-math.inf])
-    upper_bt.append([""])
+  # Set all other columns to negative infinity
+  for i in range(height + 1):
     for j in range(width):
       upper[i].append(-math.inf)
       upper_bt[i].append("")
 
   return (upper, upper_bt)
+
+
+def get_new_lower_grid(width, height):
+  lower = [[0]]
+  lower_bt = [[""]]
+
+  # Set top edge to OPEN_PENALTY + index * EXTEND_PENALTY
+  for i in range(width):
+    #value = -OPEN_PENALTY - i * EXTEND_PENALTY
+    value = -OPEN_PENALTY
+    lower[0].append(value)
+    lower_bt[0].append("-")
+
+
+  # Set all other rows to negative infinity
+  for i in range(1, height + 1):
+    lower.append([-math.inf])
+    lower_bt.append([""])
+    for j in range(width):
+      lower[i].append(-math.inf)
+      lower_bt[i].append("")
+
+  return (lower, lower_bt)
 
 
 def get_new_middle_grid(width, height):
@@ -207,14 +247,16 @@ def get_new_middle_grid(width, height):
 
   # Set top edge to OPEN_PENALTY + index * EXTEND_PENALTY
   for i in range(width):
-    value = OPEN_PENALTY + i * EXTEND_PENALTY
+    #value = -OPEN_PENALTY - i * EXTEND_PENALTY
+    value = -OPEN_PENALTY
     middle[0].append(value)
     middle_bt[0].append("-")
 
 
   # Set left edge to OPEN_PENALTY + index * EXTEND_PENALTY
   for i in range(height):
-    value = OPEN_PENALTY + i * EXTEND_PENALTY
+    #value = -OPEN_PENALTY - i * EXTEND_PENALTY
+    value = -OPEN_PENALTY
     middle.append([value])
     middle_bt.append(["|"])
 
@@ -227,8 +269,15 @@ def get_new_middle_grid(width, height):
   return (middle, middle_bt)
 
 
-s1 = 'PRTEINS'
-s2 = 'PRTWPSEIN'
+#s1 = 'PRTEINS'
+#s2 = 'PRTWPSEIN'
+
+#s1 = 'AHRMPQ' #AHRMPQ
+#s2 = 'AHED' #AHE--D
+
+s1 = 'EFLYGWNCKSNSPRGAIERLHHQHDWCTEPYETPRDDTQAEKYYYPDDSWDPWVGHHSSKYFAAFCYYLSALPHLA'
+s2 = 'MPMISNSWCTEPTEHDRTQGEKYYKPDDSHSNKYVTHHLSMVTFCYTLSASVKEEEHLA'
+
 s1p, s2p = align_with_affine_gap(s1, s2)
-print(s1)
-print(s2)
+print(''.join(s1p))
+print(''.join(s2p))
