@@ -134,22 +134,44 @@ def backtrack(s1, s2, lower_bt, middle_bt, upper_bt):
   i = len(middle_bt) - 1
   j = len(middle_bt[0]) - 1
 
+  loc = 'MIDDLE'
+
   #view_bt_matrices(lower_bt, middle_bt, upper_bt)
 
-  while i>=0 and j>=0 and middle_bt[i][j] != '':
-        if middle_bt[i][j] == "\\":
-            s1p.append(s1[i-1])
-            s2p.append(s2[j-1])
-            i -= 1
-            j -= 1
-        elif middle_bt[i][j] == "|":
-            s1p.append(s1[i-1])
-            s2p.append('-')
-            i -= 1
-        elif middle_bt[i][j] == '-':
-            s1p.append('-')
-            s2p.append(s2[j-1])
-            j -= 1
+  while i >= 0 and j >= 0 and middle_bt[i][j] != '':
+    if loc == 'MIDDLE':
+      if middle_bt[i][j] == "M":
+        s1p.append(s1[i-1])
+        s2p.append(s2[j-1])
+        i -= 1
+        j -= 1
+      elif middle_bt[i][j] == "D":
+        s1p.append(s1[i-1])
+        s2p.append('-')
+        loc = "LOWER"
+      elif middle_bt[i][j] == 'I':
+        s1p.append('-')
+        s2p.append(s2[j-1])
+        loc = "UPPER"
+    elif loc == 'LOWER':
+      if lower_bt[i][j] == "E":
+        s1p.append(s1[i-2])
+        s2p.append('-')
+      elif lower_bt[i][j] == "O":
+        loc = "MIDDLE"
+      else:
+        raise Exception("UNKOWN LOWER '{}'".format(lower_bt[i][j]))
+      i -= 1
+    elif loc == 'UPPER':
+      if upper_bt[i][j] == "E":
+        s1p.append('-')
+        s2p.append(s2[j - 2])
+      elif upper_bt[i][j] == "O":
+        loc = "MIDDLE"
+      else:
+        raise Exception("UNKOWN UPPER '{}'".format(upper_bt[i][j]))
+      j -= 1
+
   s1p.reverse()
   s2p.reverse()
 
@@ -164,9 +186,9 @@ def calc_lower(i, j, lower, lower_bt, middle):
   lower[i][j] = max_v
 
   if max_v == next_lower:
-    lower_bt[i][j] = "|"
+    lower_bt[i][j] = "E"
   else:
-    lower_bt[i][j] = "\\"
+    lower_bt[i][j] = "O"
 
 
 def calc_upper(i, j, upper, upper_bt, middle):
@@ -177,9 +199,9 @@ def calc_upper(i, j, upper, upper_bt, middle):
   upper[i][j] = max_v
 
   if max_v == next_upper:
-    upper_bt[i][j] = "-"
+    upper_bt[i][j] = "E"
   else:
-    upper_bt[i][j] = "\\"
+    upper_bt[i][j] = "O"
 
 
 def calc_middle(i, j, middle, middle_bt, lower, upper, score):
@@ -191,11 +213,11 @@ def calc_middle(i, j, middle, middle_bt, lower, upper, score):
   middle[i][j] = max_v
 
   if max_v == next_upper:
-    middle_bt[i][j] = "-"
+    middle_bt[i][j] = "I"
   elif max_v == next_lower:
-    middle_bt[i][j] = "|"
+    middle_bt[i][j] = "D"
   else:
-    middle_bt[i][j] = "\\"
+    middle_bt[i][j] = "M"
 
 
 def get_new_upper_grid(width, height):
@@ -204,16 +226,16 @@ def get_new_upper_grid(width, height):
 
   # Set left edge to OPEN_PENALTY + index * EXTEND_PENALTY
   for i in range(height):
-    #value = -OPEN_PENALTY - i * EXTEND_PENALTY
-    value = -OPEN_PENALTY
+    value = -OPEN_PENALTY - i * EXTEND_PENALTY
+    #value = -OPEN_PENALTY
     upper.append([value])
-    upper_bt.append(["|"])
+    upper_bt.append(["O"])
 
   # Set all other columns to negative infinity
   for i in range(height + 1):
     for j in range(width):
       upper[i].append(-math.inf)
-      upper_bt[i].append("")
+      upper_bt[i].append("O")
 
   return (upper, upper_bt)
 
@@ -224,19 +246,19 @@ def get_new_lower_grid(width, height):
 
   # Set top edge to OPEN_PENALTY + index * EXTEND_PENALTY
   for i in range(width):
-    #value = -OPEN_PENALTY - i * EXTEND_PENALTY
-    value = -OPEN_PENALTY
+    value = -OPEN_PENALTY - i * EXTEND_PENALTY
+    #value = -OPEN_PENALTY
     lower[0].append(value)
-    lower_bt[0].append("-")
+    lower_bt[0].append("O")
 
 
   # Set all other rows to negative infinity
   for i in range(1, height + 1):
     lower.append([-math.inf])
-    lower_bt.append([""])
+    lower_bt.append(["O"])
     for j in range(width):
       lower[i].append(-math.inf)
-      lower_bt[i].append("")
+      lower_bt[i].append("O")
 
   return (lower, lower_bt)
 
@@ -247,10 +269,10 @@ def get_new_middle_grid(width, height):
 
   # Set top edge to OPEN_PENALTY + index * EXTEND_PENALTY
   for i in range(width):
-    #value = -OPEN_PENALTY - i * EXTEND_PENALTY
-    value = -OPEN_PENALTY
+    value = -OPEN_PENALTY - i * EXTEND_PENALTY
+    #value = -OPEN_PENALTY
     middle[0].append(value)
-    middle_bt[0].append("-")
+    middle_bt[0].append("I")
 
 
   # Set left edge to OPEN_PENALTY + index * EXTEND_PENALTY
@@ -258,13 +280,13 @@ def get_new_middle_grid(width, height):
     #value = -OPEN_PENALTY - i * EXTEND_PENALTY
     value = -OPEN_PENALTY
     middle.append([value])
-    middle_bt.append(["|"])
+    middle_bt.append(["D"])
 
   # Set all other rows and columns to negative infinity
   for i in range(1, height + 1):
     for j in range(width):
       middle[i].append(-math.inf)
-      middle_bt[i].append("")
+      middle_bt[i].append("O")
 
   return (middle, middle_bt)
 
@@ -275,8 +297,8 @@ def get_new_middle_grid(width, height):
 #s1 = 'AHRMPQ' #AHRMPQ
 #s2 = 'AHED' #AHE--D
 
-s1 = 'EFLYGWNCKSNSPRGAIERLHHQHDWCTEPYETPRDDTQAEKYYYPDDSWDPWVGHHSSKYFAAFCYYLSALPHLA'
-s2 = 'MPMISNSWCTEPTEHDRTQGEKYYKPDDSHSNKYVTHHLSMVTFCYTLSASVKEEEHLA'
+s1 = 'YHFDVPDCWAHRYWVENPQAIAQMEQICFNWFPSMMMKQPHVFKVDHHMSCRWLPIRGKKCSSCCTRMRVRTVWE'
+s2 = 'YHEDVAHEDAIAQMVNTFGFVWQICLNQFPSMMMKIYWIAVLSAHVADRKTWSKHMSCRWLPIISATCARMRVRTVWE'
 
 s1p, s2p = align_with_affine_gap(s1, s2)
 print(''.join(s1p))
